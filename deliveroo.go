@@ -9,76 +9,17 @@ import (
 	"time"
 
 	"github.com/gocolly/colly/v2"
+	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 func main() {
 	// Open database
-	db, err := sql.Open("sqlite3", "./results.db")
-	if err != nil {
-		panic(err)
-	}
-
-	// Create tables
-	_, err = db.Exec(
-		"CREATE TABLE IF NOT EXISTS customers_to_restaurants(customer_id VARCHAR(8), restaurant_id TEXT, PRIMARY KEY(customer_id, restaurant_id));",
-	)
+	db, err := sql.Open("postgres", "user=robert dbname=deliveroo-scraping sslmode=disable")
 
 	if err != nil {
 		panic(err)
 	}
-
-	_, err = db.Exec(
-		"CREATE TABLE IF NOT EXISTS restaurants(url TEXT PRIMARY KEY, name TEXT, avg_rating REAL, address TEXT, description TEXT);",
-	)
-
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = db.Exec(
-		"CREATE TABLE IF NOT EXISTS tag_types(name TEXT PRIMARY KEY);",
-	)
-
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = db.Exec(
-		"CREATE TABLE IF NOT EXISTS tags(name TEXT PRIMARY KEY, tag_type_id TEXT);",
-	)
-
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = db.Exec(
-		"CREATE TABLE IF NOT EXISTS tags_restaurants(tag_id TEXT, restaurant_id TEXT, PRIMARY KEY(tag_id, restaurant_id));",
-	)
-
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = db.Exec(
-		"CREATE TABLE IF NOT EXISTS menu_categories(id INT, name TEXT, description TEXT, restaurant_id TEXT, PRIMARY KEY(id, restaurant_id))",
-	)
-
-	if err != nil {
-		panic(err)
-	}
-
-	_, err = db.Exec(
-		"CREATE TABLE IF NOT EXISTS items(id INT, name TEXT, price REAL, is_popular BOOL, menu_category_id INT, PRIMARY KEY(id, menu_category_id))",
-	)
-
-	if err != nil {
-		panic(err)
-	}
-
-	// Create DB mutex
-
-	var mutex = &sync.Mutex{}
 
 	// Create processors
 
@@ -90,7 +31,7 @@ func main() {
 
 	go func() {
 		defer wg.Done()
-		writeCustomersToRestaurants(db, customerToRestaurantChan, mutex)
+		writeCustomersToRestaurants(db, customerToRestaurantChan)
 	}()
 
 	// Create colly collector
@@ -98,7 +39,7 @@ func main() {
 		colly.Async(true),
 		colly.MaxDepth(2),
 	)
-	c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 8, RandomDelay: 200 * time.Millisecond})
+	c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 2, RandomDelay: 500 * time.Millisecond})
 
 	c.OnRequest(func(r *colly.Request) {
 		fmt.Println("Visiting", r.URL)
@@ -128,10 +69,10 @@ func main() {
 
 	c.OnHTML("script[data-component-name=\"MenuIndexApp\"]", func(e *colly.HTMLElement) {
 		wg.Add(1)
-		go func(db *sql.DB, e *colly.HTMLElement, mutex *sync.Mutex) {
+		go func(db *sql.DB, e *colly.HTMLElement) {
 			defer wg.Done()
-			processMenuBody(db, e, mutex)
-		}(db, e, mutex)
+			processMenuBody(db, e)
+		}(db, e)
 	})
 
 	// For each postcode
@@ -174,17 +115,15 @@ type customerToRestaurant struct {
 	restaurantID string
 }
 
-func writeCustomersToRestaurants(db *sql.DB, c <-chan customerToRestaurant, mutex *sync.Mutex) {
-	stmt, err := db.Prepare("INSERT OR IGNORE INTO customers_to_restaurants(customer_id, restaurant_id) VALUES (?, ?)")
+func writeCustomersToRestaurants(db *sql.DB, c <-chan customerToRestaurant) {
+	stmt, err := db.Prepare("INSERT INTO customers_to_restaurants(customer_id,restaurant_id) VALUES ($1,$2) ON CONFLICT DO NOTHING")
 
 	if err != nil {
 		panic(err)
 	}
 
 	for custRest := range c {
-		mutex.Lock()
 		_, err := stmt.Exec(custRest.customerID, custRest.restaurantID)
-		mutex.Unlock()
 
 		if err != nil {
 			panic(err)
@@ -194,7 +133,7 @@ func writeCustomersToRestaurants(db *sql.DB, c <-chan customerToRestaurant, mute
 	stmt.Close()
 }
 
-func processMenuBody(db *sql.DB, e *colly.HTMLElement, mutex *sync.Mutex) {
+func processMenuBody(db *sql.DB, e *colly.HTMLElement) {
 	var details restaurantDetails
 	err := json.Unmarshal([]byte(e.Text), &details)
 
@@ -204,13 +143,12 @@ func processMenuBody(db *sql.DB, e *colly.HTMLElement, mutex *sync.Mutex) {
 
 	fmt.Println(details.Restaurant.NameWithBranch)
 
-	stmt, err := db.Prepare("INSERT OR IGNORE INTO restaurants(url, name, avg_rating, address, description) VALUES (?, ?, ?, ?, ?)")
+	stmt, err := db.Prepare("INSERT INTO restaurants(url, name, avg_rating, address, description) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
 
 	if err != nil {
 		panic(err)
 	}
 
-	mutex.Lock()
 	_, err = stmt.Exec(
 		e.Request.URL.String(),
 		details.Restaurant.NameWithBranch,
@@ -218,7 +156,6 @@ func processMenuBody(db *sql.DB, e *colly.HTMLElement, mutex *sync.Mutex) {
 		fmt.Sprintf("%s, %s", details.Restaurant.StreetAddress, details.Restaurant.PostCode),
 		details.Restaurant.Description,
 	)
-	mutex.Unlock()
 
 	if err != nil {
 		panic(err)
@@ -228,44 +165,38 @@ func processMenuBody(db *sql.DB, e *colly.HTMLElement, mutex *sync.Mutex) {
 
 	// Tags
 
-	stmt1, err := db.Prepare("INSERT OR IGNORE INTO tag_types(name) VALUES (?)")
+	stmt1, err := db.Prepare("INSERT INTO tag_types(name) VALUES ($1) ON CONFLICT DO NOTHING")
 
 	if err != nil {
 		panic(err)
 	}
 
-	stmt2, err := db.Prepare("INSERT OR IGNORE INTO tags(name, tag_type_id) VALUES (?, ?)")
+	stmt2, err := db.Prepare("INSERT INTO tags(name, tag_type_id) VALUES ($1, $2) ON CONFLICT DO NOTHING")
 
 	if err != nil {
 		panic(err)
 	}
 
-	stmt3, err := db.Prepare("INSERT OR IGNORE INTO tags_restaurants(tag_id, restaurant_id) VALUES (?, ?)")
+	stmt3, err := db.Prepare("INSERT INTO tags_restaurants(tag_id, restaurant_id) VALUES ($1, $2) ON CONFLICT DO NOTHING")
 
 	if err != nil {
 		panic(err)
 	}
 
 	for _, menuTag := range details.Restaurant.Menu.MenuTags {
-		mutex.Lock()
 		_, err = stmt1.Exec(menuTag.Type)
-		mutex.Unlock()
 
 		if err != nil {
 			panic(err)
 		}
 
-		mutex.Lock()
 		_, err := stmt2.Exec(menuTag.Name, menuTag.Type)
-		mutex.Unlock()
 
 		if err != nil {
 			panic(err)
 		}
 
-		mutex.Lock()
 		_, err = stmt3.Exec(menuTag.Name, e.Request.URL.String())
-		mutex.Unlock()
 
 		if err != nil {
 			panic(err)
@@ -278,16 +209,14 @@ func processMenuBody(db *sql.DB, e *colly.HTMLElement, mutex *sync.Mutex) {
 
 	// Menu categories
 
-	stmt, err = db.Prepare("INSERT OR IGNORE INTO menu_categories(id, name, description, restaurant_id) VALUES (?, ?, ?, ?)")
+	stmt, err = db.Prepare("INSERT INTO menu_categories(id, name, description, restaurant_id) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
 
 	if err != nil {
 		panic(err)
 	}
 
 	for _, category := range details.Menu.Categories {
-		mutex.Lock()
 		_, err = stmt.Exec(category.ID, category.Name, category.Description, e.Request.URL.String())
-		mutex.Unlock()
 
 		if err != nil {
 			panic(err)
@@ -298,16 +227,14 @@ func processMenuBody(db *sql.DB, e *colly.HTMLElement, mutex *sync.Mutex) {
 
 	// Items
 
-	stmt, err = db.Prepare("INSERT OR IGNORE INTO items(id, name, price, is_popular, menu_category_id) VALUES (?, ?, ?, ?, ?)")
+	stmt, err = db.Prepare("INSERT INTO items(id, name, price, is_popular, menu_category_id) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
 
 	if err != nil {
 		panic(err)
 	}
 
 	for _, item := range details.Menu.Items {
-		mutex.Lock()
 		_, err = stmt.Exec(item.ID, item.Name, item.RawPrice, item.Popular, item.CategoryID)
-		mutex.Unlock()
 
 		if err != nil {
 			panic(err)
