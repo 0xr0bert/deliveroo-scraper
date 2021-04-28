@@ -98,7 +98,7 @@ func main() {
 		colly.Async(true),
 		colly.MaxDepth(2),
 	)
-	c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 2, RandomDelay: 1 * time.Second})
+	c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 8, RandomDelay: 200 * time.Millisecond})
 
 	c.OnRequest(func(r *colly.Request) {
 		fmt.Println("Visiting", r.URL)
