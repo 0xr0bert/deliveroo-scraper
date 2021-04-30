@@ -68,6 +68,7 @@ func main() {
 
 				ctx := colly.NewContext()
 				ctx.Put("type", "restaurant_menu")
+				ctx.Put("url", urlToVisit)
 
 				customerToRestaurantChan <- customerToRestaurant{customerID: e.Request.Ctx.Get("postcode"), restaurantID: urlToVisit}
 
@@ -163,7 +164,7 @@ func processMenuBody(db *sql.DB, e *colly.HTMLElement) {
 	}
 
 	_, err = stmt.Exec(
-		e.Request.URL.String(),
+		e.Request.Ctx.Get("url"),
 		details.Restaurant.NameWithBranch,
 		details.Rating.Value,
 		fmt.Sprintf("%s, %s", details.Restaurant.StreetAddress, details.Restaurant.PostCode),
@@ -209,7 +210,7 @@ func processMenuBody(db *sql.DB, e *colly.HTMLElement) {
 			panic(err)
 		}
 
-		_, err = stmt3.Exec(menuTag.Name, e.Request.URL.String())
+		_, err = stmt3.Exec(menuTag.Name, e.Request.Ctx.Get("url"))
 
 		if err != nil {
 			panic(err)
@@ -229,7 +230,7 @@ func processMenuBody(db *sql.DB, e *colly.HTMLElement) {
 	}
 
 	for _, category := range details.Menu.Categories {
-		_, err = stmt.Exec(category.ID, category.Name, category.Description, e.Request.URL.String())
+		_, err = stmt.Exec(category.ID, category.Name, category.Description, e.Request.Ctx.Get("url"))
 
 		if err != nil {
 			panic(err)
