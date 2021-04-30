@@ -11,7 +11,14 @@ import (
 	"github.com/gocolly/colly/v2"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
+	log "github.com/sirupsen/logrus"
 )
+
+func init() {
+	log.SetFormatter(&log.JSONFormatter{})
+
+	log.SetLevel(log.DebugLevel)
+}
 
 func main() {
 	// Open database
@@ -42,7 +49,15 @@ func main() {
 	c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 2, RandomDelay: 500 * time.Millisecond})
 
 	c.OnRequest(func(r *colly.Request) {
-		fmt.Println("Visiting", r.URL)
+		log.WithField("url", r.URL.String()).Debug("Visiting")
+	})
+
+	c.OnError(func(r *colly.Response, err error) {
+		log.WithFields(log.Fields{
+			"url":      r.Request.URL.String(),
+			"response": r,
+			"err":      err,
+		}).Error("Failed")
 	})
 
 	c.OnHTML("a[href]", func(e *colly.HTMLElement) {
@@ -140,8 +155,6 @@ func processMenuBody(db *sql.DB, e *colly.HTMLElement) {
 	if err != nil {
 		panic(err)
 	}
-
-	fmt.Println(details.Restaurant.NameWithBranch)
 
 	stmt, err := db.Prepare("INSERT INTO restaurants(url, name, avg_rating, address, description) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING")
 
