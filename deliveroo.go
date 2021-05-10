@@ -8,7 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gocolly/colly/v2"
+	"github.com/gocolly/colly"
+	"github.com/gocolly/colly/proxy"
 	_ "github.com/lib/pq"
 	_ "github.com/mattn/go-sqlite3"
 	log "github.com/sirupsen/logrus"
@@ -47,6 +48,17 @@ func main() {
 		colly.MaxDepth(2),
 	)
 	c.Limit(&colly.LimitRule{DomainGlob: "*", Parallelism: 2, RandomDelay: 500 * time.Millisecond})
+
+	rp, err := proxy.RoundRobinProxySwitcher(
+		"https://robertgreener%40protonmail.ch:Repose5-Defrost-Engraving-Gander@uk2150.nordvpn.com:89",
+		"https://robertgreener%40protonmail.ch:Repose5-Defrost-Engraving-Gander@uk1784.nordvpn.com:89",
+		"https://robertgreener%40protonmail.ch:Repose5-Defrost-Engraving-Gander@uk1894.nordvpn.com:89",
+	)
+
+	if err != nil {
+		panic(err)
+	}
+	c.SetProxyFunc(rp)
 
 	c.OnRequest(func(r *colly.Request) {
 		log.WithField("url", r.URL.String()).Debug("Visiting")

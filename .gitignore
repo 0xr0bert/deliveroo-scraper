@@ -2,3 +2,4 @@ deliveroo
 .vscode/
 results.db
 customers.csv
+csvfiles/
