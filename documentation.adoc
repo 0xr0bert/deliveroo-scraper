@@ -1,0 +1,144 @@
+= Deliveroo Data
+Robert A. Greener <Robert.Greener@lshtm.ac.uk>
+v1.0.0, April 29, 2021
+:toc:
+:sectnums: value
+
+[abstract]
+== Abstract
+
+This data was scraped from Deliveroo on the 29th of April 2021.
+The software used to scrape this data is available from https://doi.org/10.5281/zenodo.4746171 upon request.
+
+[[customers]]
+== `customers` table
+
+This table stores potential customers, i.e. the postcodes which were scraped
+
+=== Fields
+
+*  [#postcode]#`postcode`# -- Type: `TEXT PRIMARY KEY`--This is a postcode area which was scraped.
+
+=== Example data
+
+* `postcode` -- NW1
+
+[[restaurants]]
+== `restaurants` table
+
+The table stores restaurants from Deliveroo.
+
+=== Fields
+
+* [#url]#`url`# -- Type: `TEXT PRIMARY KEY` -- This is the URL of the restaurant. It functions as its identifier.
+* `name` -- Type: `TEXT NOT NULL` -- This is the name of the restaurant.
+* `avg_rating` -- Type: `REAL` -- This is the average rating the restaurant has received.
+* `address` -- Type: `TEXT NOT NULL` -- This is the street address of the restaurant.
+* `description` -- Type: `TEXT` -- This is the description of the restaurant.
+
+=== Example data
+
+* `url` -- https://deliveroo.co.uk/menu/london/st-john’s-wood/gelato-mio
+* `name` -- Unico - Gelato & Caffè
+* `avg_rating` -- 4.6
+* `address` -- 138 St Johnswood High Street, London, NW87SE
+* `description` -- Unico - more than a Gelateria. We pride ourselves for being passionate about making artisanal, fresh and tasty gelato, authentic Italian coffee, delicious pastries, and more. With vegan and celiac options, we want to make you feel at home.
+
+== `customers_to_restaurants` table
+
+This table stores the many-to-many relationship between the <<customers,`customers`>> table and the <<restaurants,`restaurants`>> table. The semantics of an entry here are that a given customer can purchase from a given restaurant. Not all customers will have entries in this table. This means that Deliveroo was not able at their postcode.
+
+=== Fields
+
+* `customer_id` -- Type: `TEXT FOREIGN KEY REFERENCES customers (postcode) NOT NULL` -- This references the <<postcode,`postcode`>> field of the <<customers,`customers`>> table. i.e., the `customers` table should be merged with this one on this field.
+* `restaurant_id` -- Type: `TEXT FOREIGN KEY REFERENCES restaurants (url) NOT NULL` -- This references the <<url,`url`>> field of the <<restaurants,`restaurants`>> table. i.e., the `restaurants` table should be merged with this one on this field.
+
+In this table `customer_id` and `restaurant_id` form a multi-column primary key -- i.e., they uniquely identify an entry.
+
+=== Example data
+
+* `customer_id` -- NW1
+* `restaurant_id` -- https://deliveroo.co.uk/menu/london/st-john’s-wood/gelato-mio
+
+[[menucategories]]
+== `menu_categories` table
+
+This table stores the different menu categories in a restaurant.
+
+=== Fields
+
+* [#mencatid]#`id`# -- Type: `INT PRIMARY KEY` -- This is the unique ID of the menu category.
+* `name` -- Type: `TEXT NOT NULL` -- This is the name of the menu category.
+* `description` -- Type: `TEXT` -- This is the description of the menu category.
+* `restaurant_id` -- Type: `TEXT FOREIGN KEY REFERENCES restaurants (url) NOT NULL` -- This references <<url,`url`>> of the <<restaurants,`restaurants`>> table -- i.e., the `restaurants` table should be merged with this one on this field.
+
+=== Example data
+
+* `id` -- 45751676
+* `name` -- Our Latest and Greatest
+* `description` -- Spring time served up! Fresh, full of flavour and only available at a limited number of restaurants
+* `restaurant_id` -- https://deliveroo.co.uk/menu/sheffield/rotherham-city-centre/nandos-rotherham-parkgate
+
+== `items` table
+
+This table stores products which could be purchased. Hint: In order to link this to a restaurant, join first on <<menucategories,`menu_categories`>>, then on <<restaurants,`restaurants`>>.
+
+=== Fields
+
+* `id` -- Type: `INT PRIMARY KEY` -- This is the ID of the item.
+* `name` -- Type: `TEXT NOT NULL` -- This is the name of the item.
+* `price` -- Type: `MONEY NOT NULL` -- This is the price of the item in GBP.
+* `is_popular` -- Type: `REAL NOT NULL` -- This is `t` if the product is listed as being a popular item, 0 otherwise.
+* `menu_category_id` -- Type: `INT FOREIGN KEY REFERENCES menu_categories (id) NOT NULL` -- This references <<menucatid,`id`>> of the <<menucategories,`menu_categories`>> table -- i.e., the `menu_categories` table should be merged with this one on this field.
+
+=== Example data
+
+* `id` -- 76293623
+* `name` -- Chicken Chow Mein
+* `price` -- £4.00
+* `is_popular` -- f
+* `menu_category_id` -- 8102773
+
+[[tagtypes]]
+== `tag_types` table
+
+This table stores the categories of tags a restaurant can have. These are categories in which the tags (e.g., Vegan, Burgers, Italian, etc.) are sorted into.
+
+=== Fields
+
+* [#ttname]#`name`# -- Type: `TEXT PRIMARY KEY` -- This is the name of the tag type.
+
+=== Example data
+
+* `name` -- Locale
+
+[[tags]]
+== `tags` table
+
+This table stores tags which a restaurant may have.
+
+=== Fields
+
+* [#tagname]#`name`# -- Type: `TEXT PRIMARY KEY` -- This is the name of the tag.
+* `tag_type_id` -- Type: `TEXT FOREIGN KEY REFERENCES tag_types (name) NOT NULL` -- this is the name of the tag type. It can be merged with the <<ttname,`name`>> field of the <<tagtypes,`tag_types`>> table; however, there is no real benefit in doing so, as this provides no additional information.
+
+=== Example data
+
+* `name` --- Dessert
+* `tag_type_id` -- Food
+
+== `tags_restaurants` table
+
+This table stores the many-to-many relationship between the <<tags,`tags`>> table and the <<restaurants,`restaurants`>> table. The semantics of an entry here are that a given tag was listed on the menu page of a given restaurant at the time of scraping. Not every restaurant will have entries here, as some were untagged.
+
+=== Fields
+
+* `tag_id` -- Type: `TEXT FOREIGN KEY REFERENCES tags (name) NOT NULL` -- This references <<tagname,`name`>> of the <<tags,`tags`>> table -- i.e., the `tags` table should be merged with this one on this field.
+* `restaurant_id` -- Type: `TEXT FOREIGN KEY REFERENCES restaurants (url) NOT NULL` -- This references <<url,`url`>> of the <<restaurants,`restaurants`>> table -- i.e., the `restaurants` table should be merged with this one on this field.
+
+In this table `tag_id` and `restaurant_id` form a multi-column primary key -- i.e., together they uniquely identify an entry.
+
+=== Example data
+
+* `tag_id` -- Dessert
+* `restaurant_id` -- https://deliveroo.co.uk/menu/london/st-john’s-wood/gelato-mio
