@@ -1,0 +1,25 @@
+{
+  "name": "roo-scraper.ts",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "license": "GPL-3.0-or-later",
+  "scripts": {
+    "build": "tsc",
+    "locations": "node ./bin/locations.js"
+  },
+  "dependencies": {
+    "bottleneck": "^2.19.5",
+    "cheerio": "^1.0.0-rc.10",
+    "got": "^12.0.1",
+    "ngeohash": "^0.6.3",
+    "pg": "^8.7.3",
+    "pg-format": "^1.0.4",
+    "typescript": "^4.6.2"
+  },
+  "devDependencies": {
+    "@types/ngeohash": "^0.6.4",
+    "@types/pg": "^8.6.4",
+    "@types/pg-format": "^1.0.2"
+  }
+}
