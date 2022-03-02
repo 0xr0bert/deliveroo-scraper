@@ -133,10 +133,10 @@ export async function getAndProcessLocation(
  */
 const pool: pg.Pool = new pg.Pool({
   user: 'postgres',
-  host: 'localhost',
+  host: 'db',
   password: 'postgres',
   database: 'postgres',
-  port: 15434,
+  port: 5432,
 });
 
 /**
