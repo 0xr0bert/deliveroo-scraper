@@ -7,7 +7,8 @@
   "scripts": {
     "build": "tsc",
     "locations": "node ./bin/locations.js",
-    "restaurants": "node ./bin/restaurants.js"
+    "restaurants": "node ./bin/restaurants.js",
+    "tags": "node ./bin/tags.js"
   },
   "dependencies": {
     "bottleneck": "^2.19.5",

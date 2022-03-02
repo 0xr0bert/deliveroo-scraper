@@ -2,7 +2,7 @@ import got from 'got';
 import pg from 'pg';
 import format from 'pg-format';
 import Bottleneck from 'bottleneck';
-import {MAX_CONCURRENT, MIN_TIME} from './config';
+import {MAX_CONCURRENT, MIN_TIME} from './config.js';
 
 /**
  * The MenuTag returned by the API.
