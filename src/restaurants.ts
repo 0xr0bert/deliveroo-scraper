@@ -23,6 +23,9 @@ export async function getRestaurant(restaurantId: string): Promise<any> {
         RESTAURANTS_URL,
         {
             cookieJar,
+            timeout: {
+                request: 10000
+            },
             json: {
                 variables: {
                     options: {
@@ -463,6 +466,8 @@ export async function getAndProcessRestaurant(restaurantId: string, client: pg.P
     const res = await getRestaurantW(restaurantId);
     if (res.data !== null) {
         await processSuccessulResult(res.data.get_menu_page.meta, client);
+    } else {
+        client.release();
     }
 }
 
