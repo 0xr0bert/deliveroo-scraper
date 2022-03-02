@@ -423,11 +423,13 @@ export async function processSuccessulResult(
         o.name,
         o.description,
                 o.price ? o.price.code : null,
-                o.price ? o.price.fractional : null,
+                o.price ? (o.price.fractional >= -999999 ?
+                  o.price.fractional : null) : null,
                 o.price ? o.price.formatted : null,
                 o.price ? o.price.presentational : null,
                 o.price_discounted ? o.price_discounted.code : null,
-                o.price_discounted ? o.price_discounted.fractional : null,
+                o.price_discounted ? (o.price_discounted.fractional >= -999999 ?
+                  o.price_discounted.fractional : null) : null,
                 o.price_discounted ? o.price_discounted.formatted : null,
                 o.price_discounted ? o.price_discounted.presentational : null,
                 o.available,
@@ -488,6 +490,7 @@ export async function processSuccessulResult(
     await client.query('COMMIT');
   } catch (e) {
     await client.query('ROLLBACK');
+    console.log(JSON.stringify(result));
     throw e;
   } finally {
     client.release();
