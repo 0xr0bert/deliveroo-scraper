@@ -314,6 +314,10 @@ export async function processSuccessulResult(
             item.alcohol,
             item.max_selection,
             item.is_signature_exclusive,
+            item.nutritional_info != undefined ?
+              item.nutritional_info.energy : null,
+            item.nutritional_info != undefined ?
+              item.nutritional_info.energy_formatted : null,
     ]);
 
     const insertItemQuery = format!(
@@ -340,7 +344,9 @@ export async function processSuccessulResult(
         popular,
         alcohol,
         max_selection,
-        is_signature_exclusive
+        is_signature_exclusive,
+        nutritional_info__energy,
+        nutritional_info__energy_formatted,
       ) VALUES %L ON CONFLICT DO NOTHING
       `, items,
     );
@@ -669,7 +675,21 @@ interface Item {
   /**
    * Is it a signature exclusive?
    */
-  is_signature_exclusive: boolean
+  is_signature_exclusive: boolean,
+
+  /**
+   * The nutritional info
+   */
+  nutritional_info?: {
+    /**
+     * The calories.
+     */
+    energy?: number,
+    /**
+     * The formatted calories.
+     */
+    energy_formatted?: string
+  }
 }
 
 /**

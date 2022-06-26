@@ -1,10 +1,10 @@
 create table if not exists locations (
-  id varchar(10) primary key,
-  name text not null,
-  region text not null,
-  latitude double precision not null,
-  longitude double precision not null,
-  visited_time timestamptz
+    id varchar(10) primary key,
+    name text not null,
+    region text not null,
+    latitude double precision not null,
+    longitude double precision not null,
+    visited_time timestamptz
 );
 create table if not exists locations_to_restaurants(
     location_id varchar(10) not null,
@@ -93,6 +93,8 @@ create table if not exists items(
     alcohol boolean,
     max_selection int,
     is_signature_exclusive boolean,
+    nutritional_info__energy int,
+    nutritional_info__energy_formatted text,
     constraint fk_restaurant_id foreign key(restaurant_id) references restaurants(id) on delete cascade
 );
 create table if not exists items_to_modifier_groups(
