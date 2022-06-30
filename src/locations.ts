@@ -71,9 +71,10 @@ export async function getRestaurants(
         .home
         .feed
         .results
-        .data[0]
-        .blocks
-        .map((b: any) => b.target.restaurant?.id);
+        .data
+        .map((d: any) => d.blocks.map((b: any) => b.target?.restaurant?.id))
+        .flat()
+        .filter((e: any) => e !== undefined);
     return {id: location.id, restaurants: ids};
   } else {
     console.log(res);
