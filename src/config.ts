@@ -9,8 +9,8 @@ export const RESTAURANTS_URL = BASE_URL + '/consumer/menus/graphql/';
 /**
  * The minimum time between requests.
  */
-export const MIN_TIME = 333;
+export const MIN_TIME = 1000;
 /**
  * The maximum number of concurrent requests.
  */
-export const MAX_CONCURRENT = 3;
+export const MAX_CONCURRENT = 1;
