@@ -83,7 +83,11 @@ query GetMenuPage($options: MenuOptionsInput, $requestUuid: String) {
         alcohol,
         modifier_group_ids,
         max_selection,
-        is_signature_exclusive
+        is_signature_exclusive,
+        nutritional_info {
+          energy,
+          energy_formatted
+        }
       },
       modifier_groups {
         id,
@@ -346,7 +350,7 @@ export async function processSuccessulResult(
         max_selection,
         is_signature_exclusive,
         nutritional_info__energy,
-        nutritional_info__energy_formatted,
+        nutritional_info__energy_formatted
       ) VALUES %L ON CONFLICT DO NOTHING
       `, items,
     );
