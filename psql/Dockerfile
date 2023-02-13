@@ -1,4 +1,4 @@
-FROM docker.io/postgres:14.2-alpine
+FROM docker.io/postgres:15.1-alpine
 
 COPY copy-restaurants.sql /copy-restaurants.sql
 COPY create-tables.sql /docker-entrypoint-initdb.d/

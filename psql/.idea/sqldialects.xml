@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/drop-non-existent-restaurants.sql" dialect="PostgreSQL" />
+    <file url="file://$PROJECT_DIR$/../../ubereats-scraper/psql/drop-non-existent-restaurants.sql" dialect="PostgreSQL" />
+    <file url="file://D:/datasets/Scraping/2023-02-prep/roo-inttermediate.sql" dialect="PostgreSQL" />
+  </component>
+</project>

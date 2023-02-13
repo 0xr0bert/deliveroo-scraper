@@ -103,8 +103,7 @@ create table if not exists items_to_modifier_groups(
     restaurant_id varchar(10) not null,
     primary key(item_id, modifier_group_id, restaurant_id),
     constraint fk_item_id foreign key(item_id) references items(id) on delete cascade,
-    constraint fk_restaurant_id foreign key(restaurant_id) references restaurants(id) on delete cascade,
-    constraint fk_modifier_group_id foreign key(modifier_group_id) references modifier_groups(id) on delete cascade
+    constraint fk_restaurant_id foreign key(restaurant_id) references restaurants(id) on delete cascade
 );
 create table if not exists categories(
     id varchar(20) primary key,
@@ -121,4 +120,10 @@ create table if not exists items_to_categories(
     constraint fk_item_id foreign key(item_id) references items(id) on delete cascade,
     constraint fk_restaurant_id foreign key(restaurant_id) references restaurants(id) on delete cascade,
     constraint fk_category_id foreign key(category_id) references categories(id) on delete cascade
+);
+create table if not exists tags_visited_time(
+    restaurant_id varchar(10) not null,
+    visited_time timestamptz,
+    primary key(restaurant_id),
+    constraint fk_restaurant_id foreign key(restaurant_id) references restaurants(id) on delete cascade
 );

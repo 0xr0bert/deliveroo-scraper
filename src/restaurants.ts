@@ -38,6 +38,10 @@ export async function getRestaurant(restaurantId: string): Promise<any> {
         timeout: {
           request: 10000,
         },
+        headers: {
+          'accept': 'application/json',
+          'user-agent': undefined,
+        },
         json: {
           variables: {
             options: {
@@ -203,9 +207,6 @@ query GetMenuPage($options: MenuOptionsInput, $requestUuid: String) {
   }
 }
                 `,
-          headers: {
-            'accept': 'application/json',
-          },
         },
       },
   ).json();
@@ -515,10 +516,15 @@ export async function processSuccessulResult(
 export async function getAndProcessRestaurant(
     restaurantId: string,
     client: pg.PoolClient) {
-  const res = await getRestaurantW(restaurantId);
-  if (res.data !== null) {
-    await processSuccessulResult(res.data.get_menu_page.meta, client);
-  } else {
+  try {
+    const res = await getRestaurantW(restaurantId);
+    if (res.data !== null) {
+      await processSuccessulResult(res.data.get_menu_page.meta, client);
+    } else {
+      client.release();
+    }
+  } catch (e) {
+    console.log({error: e});
     client.release();
   }
 }
@@ -528,7 +534,7 @@ export async function getAndProcessRestaurant(
  */
 const pool: pg.Pool = new pg.Pool({
   user: 'postgres',
-  host: 'db',
+  host: 'localhost',
   password: 'postgres',
   database: 'postgres',
   port: 5432,

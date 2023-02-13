@@ -63,12 +63,22 @@ export async function writeTags(
   try {
     const insertData = tags.map((t) => [restaurantId, t.name, t.type]);
     if (insertData.length) {
+      await client.query('BEGIN');
       await client.query(
           format(`INSERT INTO restaurants_to_categories(
                     restaurant_id, category_name, category_type
                 ) VALUES %L ON CONFLICT DO NOTHING`, insertData),
       );
+      await client.query(
+          'UPDATE tags_visited_time SET visited_time = $1 where restaurant_id = $2',
+          [new Date(), restaurantId],
+      );
+      await client.query('COMMIT');
     }
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.log(e);
+    throw e;
   } finally {
     client.release();
   }
@@ -82,8 +92,12 @@ export async function writeTags(
 export async function getAndWriteTags(
     restaurantId: number,
     client: pg.PoolClient) {
-  const res = await getTagsW(restaurantId);
-  await writeTags(restaurantId, res, client);
+  try {
+    const res = await getTagsW(restaurantId);
+    await writeTags(restaurantId, res, client);
+  } catch (e) {
+    console.log(e);
+  }
 }
 
 /**
@@ -91,7 +105,7 @@ export async function getAndWriteTags(
  */
 const pool: pg.Pool = new pg.Pool({
   user: 'postgres',
-  host: 'db',
+  host: 'localhost',
   password: 'postgres',
   database: 'postgres',
   port: 5432,
@@ -106,13 +120,9 @@ try {
    * The IDs with no categories yet.
    */
   const res: pg.QueryResult<SQLResult> = await client.query(`
-        SELECT id
-        FROM restaurants r
-        WHERE NOT EXISTS (
-            SELECT
-            FROM restaurants_to_categories
-            WHERE restaurant_id = r.id
-        ) 
+        SELECT restaurant_id AS id
+        FROM tags_visited_time
+        WHERE visited_time IS NULL
     `);
 
   /**
