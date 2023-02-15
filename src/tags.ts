@@ -62,19 +62,19 @@ export async function writeTags(
     client: pg.PoolClient) {
   try {
     const insertData = tags.map((t) => [restaurantId, t.name, t.type]);
+    await client.query('BEGIN');
     if (insertData.length) {
-      await client.query('BEGIN');
       await client.query(
           format(`INSERT INTO restaurants_to_categories(
                     restaurant_id, category_name, category_type
                 ) VALUES %L ON CONFLICT DO NOTHING`, insertData),
       );
-      await client.query(
-          'UPDATE tags_visited_time SET visited_time = $1 where restaurant_id = $2',
-          [new Date(), restaurantId],
-      );
-      await client.query('COMMIT');
     }
+    await client.query(
+        'UPDATE tags_visited_time SET visited_time = $1 where restaurant_id = $2',
+        [new Date(), restaurantId],
+    );
+    await client.query('COMMIT');
   } catch (e) {
     await client.query('ROLLBACK');
     console.log(e);
